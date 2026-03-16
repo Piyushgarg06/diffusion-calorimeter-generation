@@ -1,4 +1,11 @@
 # Diffusion-Based Generative Modeling for Sparse Calorimeter Detector Data
+## Example Generated Shower
+
+![Generated sample](results/generated_sample.png)
+
+## Energy Distribution Comparison
+
+![Energy distribution](results/energy_distribution.png)
 
 ## Overview
 
