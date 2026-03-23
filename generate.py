@@ -19,5 +19,5 @@ plt.imshow(samples[0,0])
 plt.colorbar()
 plt.title("Generated Sample Channel 0")
 
-plt.savefig("results/generated_sample.png", dpi=300)
+plt.savefig("results/generated_sample1.png", dpi=300)
 plt.show()

@@ -20,9 +20,9 @@ loader = get_loader(
 model=SimpleCNN(T=200)
 diffusion=Diffusion()
 
-optimizer = optim.Adam(model.parameters(), lr=1e-4)
+optimizer = optim.Adam(model.parameters(), lr=5e-5)
 
-epochs = 30
+epochs = 150
 
 for epoch in range(epochs):
 

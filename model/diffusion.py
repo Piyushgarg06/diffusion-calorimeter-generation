@@ -7,13 +7,10 @@ class Diffusion:
 
         self.T = timesteps
 
-        # beta schedule
         self.betas = torch.linspace(1e-4, 0.02, timesteps)
 
-        # alpha values
         self.alphas = 1.0 - self.betas
 
-        # cumulative product
         self.alpha_bar = torch.cumprod(self.alphas, dim=0)
         
     def sample_xt(self, x0, t):
@@ -30,16 +27,12 @@ class Diffusion:
 
         batch_size = x0.shape[0]
 
-        # sample random timestep
         t = torch.randint(0, self.T, (batch_size,))
 
-        # create noisy image
         xt, noise = self.sample_xt(x0, t)
 
-        # predict noise
         pred_noise = model(xt,t)
 
-        # mse loss
         loss = F.mse_loss(pred_noise, noise)
 
         return loss
