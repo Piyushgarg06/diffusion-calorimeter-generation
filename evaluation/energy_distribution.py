@@ -25,7 +25,7 @@ real_denorm = np.exp(real_log)
 real_energy = real_denorm.sum(axis=(1,2,3))
 
 model = SimpleCNN(T=200)
-model.load_state_dict(torch.load("model.pth"))
+model.load_state_dict(torch.load("Saved/model_epoch_200.pth"))
 
 diffusion = Diffusion()
 
@@ -40,8 +40,9 @@ for i in range(0, num_samples, batch_size):
     print(f"Generated {i + n}/{num_samples}")
 
 samples = np.concatenate(all_samples, axis=0)
+samples = np.clip(samples, -3, 3)
 log_space = samples * std + mean
-log_space = np.clip(log_space, -20, 20)
+log_space = np.clip(log_space, -10, 2)
 gen_denorm = np.exp(log_space)
 generated_energy = gen_denorm.sum(axis=(1,2,3))
 
@@ -50,6 +51,7 @@ print("Generated min/max:", gen_denorm.min(), gen_denorm.max())
 print("Real min/max:", real_denorm.min(), real_denorm.max())
 
 # TOTAL ENERGY AND HISTOGRAM 
+
 plt.hist(real_energy, bins=50, alpha=0.5, label="Real")
 plt.hist(generated_energy, bins=50, alpha=0.5, label="Generated")
 
