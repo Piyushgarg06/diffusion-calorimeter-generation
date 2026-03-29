@@ -1,5 +1,6 @@
 import matplotlib.pyplot as plt
 import h5py
+import numpy as np
 f = h5py.File("data/Dataset_Specific_Unlabelled.h5","r")
 data = f["jet"]
 
@@ -9,7 +10,6 @@ plt.imshow(sample[:,:,0])
 plt.title("Channel 0")
 plt.colorbar()
 plt.show()
-import numpy as np
 
 print("Minimum value:", np.min(sample))
 print("Maximum value:", np.max(sample))
