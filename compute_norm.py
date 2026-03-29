@@ -2,7 +2,7 @@ import h5py
 import torch
 
 file = h5py.File("data/Dataset_Specific_Unlabelled.h5", "r")
-data = file["jet"][:5000]  # same as training subset
+data = file["jet"][:5000] 
 
 data = torch.tensor(data).float()
 
