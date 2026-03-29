@@ -2,268 +2,222 @@
 
 ## Overview
 
-This project implements a diffusion-based generative model trained on a sparse multi-channel detector dataset stored in HDF5 format.
+This project implements a diffusion-based generative model for highly sparse multi-channel calorimeter-like detector data.
 
-The goal is to evaluate whether diffusion models can reproduce the statistical properties of calorimeter-like detector showers using only unlabelled data.
+The goal is to explore whether denoising diffusion probabilistic models (DDPMs) can learn and reproduce the statistical and spatial properties of sparse detector showers.
 
-The implementation follows the core ideas of Denoising Diffusion Probabilistic Models (DDPM) and focuses on building a complete end-to-end pipeline including:
+The implementation includes a complete end-to-end pipeline covering:
 
-- dataset preprocessing
-- forward diffusion (noise injection)
-- timestep-conditioned denoising network
-- reverse diffusion sampling
-- physics-aware statistical evaluation
+* dataset preprocessing
+* forward diffusion (noise injection)
+* timestep-conditioned denoising network
+* reverse diffusion sampling
+* physics-aware statistical evaluation
 
-The objective of the project is proof-of-concept generation and evaluation rather than achieving state-of-the-art performance.
+This project is designed as a **research-oriented prototype**, focusing on understanding model behavior on sparse data rather than achieving state-of-the-art performance.
+
+---
+
+## Project Status
+
+This project is currently under active development as part of ongoing research and a GSoC proposal.
+
+The core diffusion pipeline is implemented and functional. However, the model is still being refined and currently exhibits known challenges such as:
+
+* instability in total energy prediction
+* difficulty learning meaningful sparse structures
+* imbalance across detector channels
+
+Results and evaluation metrics are being continuously updated as improvements are explored.
 
 ---
 
 ## Dataset
 
-The dataset is stored in HDF5 format and contains detector events with the following structure:
+The dataset consists of sparse calorimeter-like detector events stored in HDF5 format with the shape:
 
-60000 x 125 x 125 x 8
+60000 × 125 × 125 × 8
 
 Where:
 
-- 60000 → number of detector events
-- 125 x 125 → spatial detector grid
-- 8 channels → detector layers or feature maps
+* 60000 → number of events
+* 125 × 125 → spatial grid
+* 8 channels → detector layers
 
-Each event represents a sparse energy deposition pattern in a detector.
+Each event represents energy deposition across detector layers.
 
-Dataset sparsity:
+### Sparsity
 
-- Approximately 98.9% of pixels are zero
-- Approximately 1.1% of pixels contain energy deposits
+* ~98.9% of pixels are zero
+* ~1.1% contain energy deposits
 
-This extreme sparsity makes the dataset challenging for generative models.
+This extreme sparsity makes the problem significantly challenging for generative models.
 
 ---
 
 ## Data Processing
 
-The dataset is loaded using the `h5py` library and converted into PyTorch tensors.
+The dataset is loaded using `h5py` and converted to PyTorch tensors.
 
 Key preprocessing steps:
 
-1. Subset sampling for faster experimentation
-2. Conversion to PyTorch tensors
-3. Channel-first format conversion for CNN compatibility
-4. Normalization of values to the range [-1, 1]
+* subset sampling for faster experimentation
+* conversion to channel-first format
+* normalization of input values
+* optional logarithmic scaling to handle dynamic range
 
-Normalization used during training:
-
-x = x / 255  
-x = x * 2 - 1
-
-Data loading implementation:
-
-training/dataLoader.py
+These steps help stabilize training under highly sparse conditions.
 
 ---
 
 ## Model Architecture
 
-A lightweight convolutional neural network is used as the diffusion denoiser.
+The current prototype uses a lightweight convolutional denoising network with timestep conditioning.
 
-Architecture:
+Key components:
 
-Input: (8, 125, 125)
+* convolutional layers for feature extraction
+* timestep embedding using `nn.Embedding`
+* coordinate injection (spatial channels) to preserve positional structure
+* energy-aware conditioning through global energy signals
 
-Conv(8 → 32)  
-ReLU  
-Conv(32 → 64)  
-ReLU  
-Conv(64 → 32)  
-ReLU  
-Conv(32 → 8)
-
-To condition the network on the diffusion timestep, a timestep embedding layer is used:
-
-nn.Embedding(T, 32)
-
-The timestep embedding is broadcast across spatial dimensions and injected into the feature maps after the first convolution layer.
-
-This allows the model to learn a time-dependent denoising function:
+The model learns to predict noise at each diffusion timestep:
 
 predicted_noise = f(x_t, t)
 
-Model implementation:
-
-model/network.py
+This forms the basis for reverse diffusion sampling.
 
 ---
 
 ## Diffusion Process
 
-The model follows the standard DDPM diffusion process.
+The implementation follows the standard DDPM framework.
 
 Noise schedule:
 
-beta_t ranges from 1e-4 to 0.02
+beta ranges from 1e-4 to 0.02 over 200 timesteps
 
-Forward diffusion gradually adds Gaussian noise to the data:
+Forward process:
 
 x_t = sqrt(alpha_bar_t) * x_0 + sqrt(1 - alpha_bar_t) * epsilon
 
-Where:
-
-alpha_t = 1 - beta_t  
-alpha_bar_t = cumulative product of alpha_t
-
-The neural network is trained to predict the noise that was added:
-
-Loss = MSE(predicted_noise, true_noise)
-
-Diffusion implementation:
-
-model/diffusion.py
+The model is trained to predict the added noise.
 
 ---
 
 ## Training
 
-Training configuration:
+Training configuration (current prototype):
 
-- diffusion steps: 200
-- batch size: 32
-- optimizer: Adam
-- learning rate: 1e-4
-- training subset: 5000 samples
-- epochs: 30
+* diffusion steps: 200
+* batch size: 32
+* optimizer: Adam
+* learning rate: 3e-5
+* training subset: 5000 samples
+* epochs: ongoing (intermediate results ~70–80 epochs)
 
-Training procedure:
-
-1. Sample random timestep t
-2. Generate noisy input x_t
-3. Predict noise epsilon
-4. Compute mean squared error loss
-5. Update model parameters
-
-Training script:
-
-training/train.py
+The training objective includes noise prediction with additional weighting to emphasize high-energy regions.
 
 ---
 
 ## Sample Generation
 
-New detector events are generated using reverse diffusion.
-
-Generation starts from random Gaussian noise:
+New samples are generated using reverse diffusion, starting from Gaussian noise:
 
 x_T ~ N(0, I)
 
-Then iteratively denoises:
-
-for t = T → 1  
-    predict noise  
-    compute x_(t-1)
-
-Generation script:
-
-generate.py
-
-Example generated detector sample:
-
-results/generated_sample.png
+The model iteratively denoises the sample to produce a structured detector event.
 
 ---
 
 ## Evaluation
 
-Instead of relying only on visual inspection, the model is evaluated using physics-aware statistical comparisons.
+The model is evaluated using physics-inspired statistical comparisons:
 
-### Total Event Energy Distribution
+### Metrics
 
-For each event we compute:
+* total event energy distribution
+* radial shower profile
+* sparsity (fraction of zero-valued cells)
+* visual comparison of real vs generated samples
 
-total_energy = sum(all detector cells)
+These metrics help assess whether generated samples match real detector behavior.
 
-This represents the total calorimeter energy deposited in the detector.
+---
 
-The distributions of real and generated events are compared using histograms.
+## Sample Results
 
-Evaluation script:
+### Real vs Generated (Intermediate Training)
 
-evaluation/energy_distribution.py
+**Real Sample**
 
-Result:
+![Real Sample](results/real_calorimeter_sample.png)
 
-results/energy_distribution.png
+**Generated Sample**
+
+![Generated Samples](results/generated_calorimeter_samples.png)
 
 ---
 
 ## Observations
 
-The diffusion model successfully generates sparse detector-like patterns with localized energy deposits.
+Initial results show that the model is able to generate sparse activation patterns, but fails to accurately reproduce the structured energy deposition observed in real data.
 
-However, the generated energy distribution currently shows a scale mismatch compared to real events.
+Key challenges observed:
 
-Possible causes include:
+* generated samples exhibit noisy and diffuse activations instead of localized energy clusters
+* total energy distribution shows mismatch compared to real data (energy instability)
+* extreme sparsity (>98%) leads to collapse toward near-zero predictions in early training
 
-- extreme dataset sparsity (approximately 98.9% background pixels)
-- normalization bias due to zero-dominated data
-- limited number of training updates
-
-Despite this limitation, the project demonstrates a fully functional diffusion-based generative pipeline for sparse detector data.
+These observations highlight the difficulty of modeling highly sparse calorimeter data and motivate improvements in architecture, conditioning, and loss design.
 
 ---
 
 ## Project Structure
 
 diffusion-calorimeter-generation/
+```
+├── inspect/
+│ ├── inspect_data.py
+│ └── visualize.py
 
-inspect/  
-    inspect_data.py  
-    visualize.py  
+├── model/
+│ ├── diffusion.py
+│ └── network.py
 
-model/  
-    diffusion.py  
-    network.py  
+├── training/
+│ ├── dataLoader.py
+│ └── train.py
 
-training/  
-    dataLoader.py  
-    train.py  
+├── evaluation/
+│ └── energy_distribution.py
 
-evaluation/  
-    energy_distribution.py  
+├── results/
+│ ├── generated_samples.png
+│ └── energy_distribution.png
 
-results/  
-    generated_sample.png  
-    energy_distribution.png  
+├── generate.py
+└── README.md
+└── compute_norm.py
+└── .gitignore
 
-generate.py  
-README.md
-
+```
 ---
 
 ## Future Work
 
-Potential improvements include:
+Planned improvements include:
 
-- longer diffusion training
-- improved normalization strategies
-- spatial shower structure analysis
-- additional evaluation metrics such as:
-  - sparsity distribution
-  - radial shower profiles
-  - Wasserstein distance between distributions
-
-These improvements would help better capture physical shower geometry in generated detector events.
+* improved architectural design (U-Net, 3D extensions)
+* better handling of sparsity and energy imbalance
+* incorporation of physics-informed loss functions
+* improved evaluation using statistical distances (KL, Wasserstein)
+* faster sampling methods for practical simulation
 
 ---
 
-## Conclusion
+## Note on Proposal Context
 
-This project demonstrates a proof-of-concept diffusion-based generative model for sparse calorimeter detector data.
+This repository is actively being developed as part of a GSoC proposal for ML4SCI.
 
-The implementation provides a full pipeline including:
-
-- dataset preprocessing
-- timestep-conditioned diffusion training
-- reverse diffusion sample generation
-- physics-aware statistical evaluation
-
-The results highlight both the potential and the challenges of applying diffusion models to sparse detector simulation tasks.
+The results and implementation may differ slightly from those described in the proposal due to ongoing experimentation and continuous improvements.
