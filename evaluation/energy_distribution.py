@@ -58,7 +58,7 @@ plt.hist(generated_energy, bins=50, alpha=0.5, label="Generated")
 plt.legend()
 plt.title("Energy Distribution Comparison")
 
-plt.savefig("results/energy_distribution1.png", dpi=300)
+plt.savefig("results/energy_distribution_comparison.png", dpi=300)
 plt.show()
 
 print("Real mean energy:", real_energy.mean())
