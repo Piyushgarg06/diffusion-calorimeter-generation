@@ -17,7 +17,6 @@ def get_loader(file_path, batch_size=32, num_sample=5000):
     subset = (subset-mean)/std
     subset=subset.permute(0,3,1,2)
 
-
     dataset=TensorDataset(subset)
 
     dataloader=DataLoader(
